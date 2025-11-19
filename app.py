@@ -13,15 +13,9 @@ from urllib3.util.retry import Retry
 
 import streamlit as st
 
-# --------------------------------------------------------------
-# STREAMLIT CONFIG
-# --------------------------------------------------------------
 st.set_page_config(page_title="AI Expense Analyzer", page_icon="💸", layout="wide")
 st.title("💸 AI Expense Analyzer — Enhanced Version")
 
-# --------------------------------------------------------------
-# DATABASE LAYER
-# --------------------------------------------------------------
 DB_FILE = "expenses.db"
 
 def get_conn():
@@ -68,18 +62,14 @@ def add_expense(amount: float, category: str, description: str, dt: date):
     )
     conn.commit()
     conn.close()
-    load_data.clear()  # refresh cached data
+    load_data.clear()
 
-# --------------------------------------------------------------
-# AGENT ROUTER CLIENT (IMPROVED)
-# --------------------------------------------------------------
 class AgentRouterClient:
     def __init__(self):
         self.endpoint = os.getenv("AGENT_ROUTER_ENDPOINT")
         self.api_key = os.getenv("AGENT_ROUTER_API_KEY")
         self.session = requests.Session()
 
-        # retries on 429 / 500+ errors
         retry_cfg = Retry(
             total=3,
             backoff_factor=1,
@@ -95,7 +85,7 @@ class AgentRouterClient:
 
     def call(self, prompt: str) -> str:
         if not self.ready():
-            return "LLM Not Configured"  # graceful fallback
+            return "LLM Not Configured" 
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -115,7 +105,6 @@ class AgentRouterClient:
         except:
             return r.text
 
-        # flexible key extraction
         for key in ["text", "output", "response", "result"]:
             if key in data:
                 return str(data[key])
@@ -125,9 +114,6 @@ class AgentRouterClient:
 
 router = AgentRouterClient()
 
-# --------------------------------------------------------------
-# PROMPT HELPERS
-# --------------------------------------------------------------
 def prompt_category(desc: str) -> str:
     return f"""
 You classify an expense into one category.
@@ -148,9 +134,6 @@ Expenses Data JSON:
 {json.dumps(sample, indent=2)}
     """.strip()
 
-# --------------------------------------------------------------
-# PARSERS
-# --------------------------------------------------------------
 def parse_bullets(text: str) -> List[str]:
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     bullets = []
@@ -161,9 +144,6 @@ def parse_bullets(text: str) -> List[str]:
             bullets.append(clean)
     return bullets
 
-# --------------------------------------------------------------
-# VISUALIZATIONS (ENHANCED)
-# --------------------------------------------------------------
 def plot_monthly(df):
     monthly = df.resample("M", on="date")["amount"].sum()
     fig = px.line(monthly, title="Monthly Spending Trend", markers=True)
@@ -192,9 +172,6 @@ def plot_daily(df):
     fig.update_layout(height=300)
     return fig
 
-# --------------------------------------------------------------
-# UI — SIDEBAR INPUT
-# --------------------------------------------------------------
 st.sidebar.header("Add New Expense")
 with st.sidebar.form("add_expense_form"):
     amount = st.number_input("Amount", min_value=0.0, step=0.5)
@@ -216,18 +193,12 @@ if submitted:
         add_expense(amount, category, desc, date_input)
         st.sidebar.success(f"Added: {amount} ({category})")
 
-# --------------------------------------------------------------
-# LOAD DATA
-# --------------------------------------------------------------
 df = load_data()
 
 if df.empty:
     st.info("No expenses recorded yet.")
     st.stop()
 
-# --------------------------------------------------------------
-# LAYOUT
-# --------------------------------------------------------------
 t1, t2 = st.tabs(["📊 Dashboard", "🤖 AI Insights"])
 
 with t1:
